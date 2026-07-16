@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>연우의 여름 대모험 🚲🏖️</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts (교보손글씨체 & 나눔스퀘어라운드 적용) -->
+    <link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=Nanum+Pen+Script&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Gaegu', 'Nanum Pen Script', sans-serif;
+            background: linear-gradient(135deg, #fef2f2 0%, #e0f2fe 100%);
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+        /* 세로형 캔버스 렌더링 최적화 */
+        canvas {
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            box-shadow: 0 8px 30px rgba(244, 63, 94, 0.15);
+        }
+        /* 버튼 터치 하이라이트 제거 */
+        button, div {
+            -webkit-tap-highlight-color: transparent;
+        }
+        /* 둥실둥실 애니메이션 효과 */
+        .bounce-soft {
+            animation: bounceSoft 2.5s infinite ease-in-out;
+        }
+        @keyframes bounceSoft {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-8px); }
+        }
+    </style>
+</head>
+<body class="w-full h-screen overflow-hidden flex flex-col justify-center items-center p-2">
+
+    <!-- 모바일 게임기 모양의 세로 프레임 컨테이너 -->
+    <div class="w-full max-w-[430px] h-[94vh] max-h-[850px] bg-white/90 backdrop-blur-md rounded-[36px] shadow-2xl border-4 border-pink-200 flex flex-col justify-between items-center p-3 relative overflow-hidden">
+        
+        <!-- 상단 헤더 UI (가로 쪼개짐 완벽 차단) -->
+        <div class="w-full bg-white/95 rounded-2xl p-2.5 shadow-sm flex justify-between items-center border border-pink-100 shrink-0 z-10 gap-2">
+            <div class="flex items-center gap-1">
+                <span class="text-base sm:text-xl font-bold text-pink-500">❤️</span>
+                <div id="heart-container" class="flex gap-0.5 text-sm sm:text-lg">❤️❤️❤️</div>
+            </div>
+            
+            <!-- 진행도 탑 바 -->
+            <div id="progress-container" class="flex-1 max-w-[42%] bg-pink-100 h-3.5 rounded-full relative overflow-hidden flex items-center px-1">
+                <div id="progress-bar" class="bg-gradient-to-r from-pink-400 to-yellow-300 h-2 rounded-full transition-all duration-100" style="width: 0%"></div>
+                <span id="progress-emoji" class="absolute text-xs transition-all duration-100" style="left: 0%">🚲</span>
+            </div>
+
+            <div class="text-right whitespace-nowrap">
+                <span class="text-gray-400 text-xs font-semibold">점수:</span>
+                <span id="score-val" class="text-base sm:text-xl font-bold text-blue-500">0</span>
+            </div>
+        </div>
+
+        <!-- 메인 게임 가상 해상도 450x800 영역 -->
+        <div class="w-full flex-1 flex flex-col justify-center items-center my-2 relative overflow-hidden rounded-2xl bg-sky-50">
+            
+            <!-- 오이팩 카운터 (2스테이지 전용 플로팅 보드) -->
+            <div id="cucumber-badge" class="absolute top-3 left-3 bg-white/95 border border-emerald-200 px-3 py-1.5 rounded-xl shadow-md flex items-center gap-1 z-10 hidden transition-all duration-300">
+                <span class="text-lg animate-bounce">🥒</span>
+                <span class="text-emerald-700 font-bold text-xs sm:text-sm">팩 수급: <span id="cucumber-count" class="text-pink-500 font-extrabold text-base">0</span> / 15</span>
+            </div>
+
+            <!-- 시작 대기 화면 -->
+            <div id="start-screen" class="absolute inset-0 bg-gradient-to-br from-sky-100 via-pink-50 to-yellow-50 rounded-2xl flex flex-col justify-center items-center p-4 text-center border-2 border-white/60 z-20 shadow-inner">
+                <div class="bounce-soft mb-2">
+                    <span class="text-5xl">🚲🏖️🥒</span>
+                </div>
+                <h1 class="text-3xl sm:text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-b from-blue-400 via-pink-400 to-yellow-500 tracking-wide">
+                    연우의 여름 대모험
+                </h1>
+                <p class="text-gray-500 text-sm sm:text-base mt-2 font-semibold">
+                    우리 딸 연우가 주인공인 스마트폰 전용 게임!
+                </p>
+                
+                <div class="mt-4 bg-white/90 p-3.5 rounded-xl border border-pink-150 text-left text-xs text-gray-600 leading-relaxed max-w-[280px] shadow-sm space-y-1">
+                    <p class="font-extrabold text-center text-pink-500 text-sm mb-1">🎮 조작 규칙</p>
+                    <p>🚴 **1단계 (자전거 라이딩)**: 장애물이 오면 아래의 파란 [점프] 버튼을 탭해 피해요!</p>
+                    <p>🥒 **2단계 (오이팩하기)**: 하단 [좌우 버튼]을 누르거나, 손가락으로 얼굴을 잡고 좌우로 스윽 비비면 오이가 얼굴에 철석 달라붙어요!</p>
+                </div>
+
+                <button id="start-btn" class="mt-5 px-8 py-3 bg-gradient-to-r from-pink-400 to-yellow-300 text-white font-extrabold text-lg sm:text-xl rounded-full shadow-md transform active:scale-95 transition-all border-b-4 border-yellow-500">
+                    모험 출발하기 🚀
+                </button>
+            </div>
+
+            <!-- 9:16 비율 세로형 반응형 캔버스 -->
+            <div class="relative w-full h-full rounded-2xl overflow-hidden flex justify-center items-center">
+                <canvas id="gameCanvas" width="450" height="800" class="w-full h-full object-cover bg-sky-50"></canvas>
+                
+                <!-- 응원 말풍선 레이어 -->
+                <div id="cheer-bubble" class="absolute top-1/3 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white/95 px-4 py-2 rounded-2xl border-2 border-pink-300 shadow-md text-pink-500 font-extrabold text-lg sm:text-xl opacity-0 scale-75 transition-all duration-300 pointer-events-none whitespace-nowrap z-10">
+                    연우 화이팅! 💕
+                </div>
+
+                <!-- 건너뛰기/토스트 알람 레이아웃 -->
+                <div id="toast-overlay" class="absolute inset-0 bg-white/90 backdrop-blur-sm flex flex-col justify-center items-center opacity-0 pointer-events-none transition-all duration-500 z-10 p-4 text-center">
+                    <h2 id="toast-title" class="text-2xl sm:text-4xl font-extrabold text-pink-500 mb-2">대단해! 🎉</h2>
+                    <p id="toast-desc" class="text-sm sm:text-lg text-gray-500">다음 단계로 힘차게 넘어갑니다!</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 세로형 스마트폰 특화 전용 하단 버튼 패드 -->
+        <div class="w-full shrink-0 px-1 pb-1">
+            <!-- 1스테이지용 하단 점프 구역 -->
+            <div id="mobile-ctrl-s1" class="w-full flex justify-center items-center">
+                <button id="touch-jump-btn" class="w-full py-3.5 bg-gradient-to-r from-blue-400 to-sky-400 text-white font-extrabold text-lg sm:text-xl rounded-xl shadow-md border-b-4 border-blue-600 active:scale-95 transform transition-all flex justify-center items-center gap-2">
+                    🚀 껑충 점프하기!
+                </button>
+            </div>
+
+            <!-- 2스테이지용 하단 전용 양손 방향 버튼 -->
+            <div id="mobile-ctrl-s2" class="w-full hidden grid grid-cols-2 gap-3">
+                <button id="touch-left-btn" class="py-3.5 bg-gradient-to-r from-yellow-300 to-amber-300 text-amber-900 font-extrabold text-xl rounded-xl shadow-md border-b-4 border-amber-500 active:scale-95 transform transition-all select-none">
+                    ◀ 왼쪽
+                </button>
+                <button id="touch-right-btn" class="py-3.5 bg-gradient-to-r from-yellow-300 to-amber-300 text-amber-900 font-extrabold text-xl rounded-xl shadow-md border-b-4 border-amber-500 active:scale-95 transform transition-all select-none">
+                    오른쪽 ▶
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 게임 완주 축하 엔딩창 모달 -->
+    <div id="ending-modal" class="fixed inset-0 bg-black/60 backdrop-blur-md flex justify-center items-center p-4 opacity-0 pointer-events-none transition-all duration-500 z-50">
+        <div class="bg-gradient-to-b from-white to-pink-50 rounded-[32px] p-6 max-w-sm w-full text-center border-4 border-pink-300 shadow-2xl transform scale-90 transition-all duration-500">
+            <span class="text-5xl animate-bounce inline-block">👑✨🏖️</span>
+            <h2 class="text-2xl sm:text-3xl font-extrabold text-pink-500 mt-4">최고의 여름 휴가 완성!</h2>
+            <p class="text-gray-500 mt-2 font-semibold text-xs sm:text-sm">우리 연우 오이팩 완성으로 피부가 반짝반짝 보들보들해졌어요! 🥒✨</p>
+            
+            <div class="bg-white/90 p-3.5 rounded-2xl border border-pink-100 my-4 shadow-inner">
+                <span class="text-gray-400 text-xs font-semibold">연우의 최종 모험 점수</span>
+                <p id="final-score" class="text-3xl sm:text-4xl font-black text-pink-500 mt-1">0점</p>
+            </div>
+
+            <button id="restart-btn" class="w-full py-3 bg-gradient-to-r from-pink-400 to-yellow-300 text-white text-base sm:text-lg font-extrabold rounded-full shadow-md border-b-4 border-yellow-500 active:scale-95 transform transition-all">
+                다시 대모험 떠나기 🔁
+            </button>
+        </div>
+    </div>
+
+    <!-- 숨겨진 사진 연동용 공간 -->
+    <div class="hidden">
+        <img id="player-img" src="KakaoTalk_20260715_162159091.jpg" crossorigin="anonymous">
+        <img id="stage1-bg" src="KakaoTalk_20260627_130001615.jpg" crossorigin="anonymous">
+        <img id="face-img" src="KakaoTalk_20260715_162159091.jpg" crossorigin="anonymous">
+    </div>
+
+    <script>
+        // --- STREAMING_CHUNK: Initializing Audio Engine ... ---
+        // --- 게임 리소스 정보 ---
+        const PLAYER_IMG_SRC = 'KakaoTalk_20260715_162159091.jpg';
+        const STAGE1_BG_SRC = 'KakaoTalk_20260627_130001615.jpg';
+        const FACE_IMG_SRC = 'KakaoTalk_20260715_162159091.jpg';
+
+        // --- 소리 합성 엔진 (Web Audio API) ---
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playSound(type) {
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            const now = audioCtx.currentTime;
+
+            if (type === 'jump') {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(150, now);
+                osc.frequency.exponentialRampToValueAtTime(600, now + 0.15);
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+                osc.start(now);
+                osc.stop(now + 0.15);
+            } else if (type === 'item') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(523.25, now);
+                osc.frequency.setValueAtTime(659.25, now + 0.08);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+                osc.start(now);
+                osc.stop(now + 0.25);
+            } else if (type === 'hurt') {
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(220, now);
+                osc.frequency.linearRampToValueAtTime(110, now + 0.2);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+                osc.start(now);
+                osc.stop(now + 0.2);
+            } else if (type === 'clear') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(523.25, now);
+                osc.frequency.setValueAtTime(659.25, now + 0.1);
+                osc.frequency.setValueAtTime(783.99, now + 0.2);
+                osc.frequency.setValueAtTime(1046.50, now + 0.3);
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+                osc.start(now);
+                osc.stop(now + 0.5);
+            }
+        }
+
+        // --- STREAMING_CHUNK: Declaring cheer text collections ... ---
+        // --- 응원 메시지 분리 배치 ---
+        const CHEER_S1 = [
+            "잘 달리고 있어! 🚴", "연우 화이팅! 💕", "조금만 더 힘내! ⭐", 
+            "자전거 안전운전! 🚲", "바람이 시원해요! 🍃", "연우가 달린다! 슝!"
+        ];
+        const CHEER_S2 = [
+            "오이 착착 붙여라! 🥒", "피부가 보들보들~ ✨", "얼굴 정중앙으로 받아봐요! 😍", 
+            "벌은 슬쩍 피하세요! 🐝", "피부가 촉촉해져요! 💕"
+        ];
+
+        // --- 오이팩 부착 상대 좌표 설계 (얼굴 정렬 가변 offset) ---
+        const cucumberFaceOffsets = [
+            {x: -18, y: -20}, {x: 18, y: -20},   // 눈 밑 부위
+            {x: 0, y: -35},                      // 이마 정중앙
+            {x: -28, y: -5},                     // 왼쪽 볼살 외곽
+            {x: 28, y: -5},                      // 오른쪽 볼살 외곽
+            {x: 0, y: 25},                       // 턱 가운데
+            {x: -15, y: 15}, {x: 15, y: 15},     // 턱 양옆 부근
+            {x: -22, y: -35}, {x: 22, y: -35},   // 이마 모서리
+            {x: 0, y: -8},                       // 콧등
+            {x: -10, y: 5}, {x: 10, y: 5},       // 인중 및 안쪽 광대
+            {x: -32, y: -20}, {x: 32, y: -20}    // 관자놀이 라인
+        ];
+
+        // 오이 슬라이스 한 장 디자인 묘사 엔진
+        function drawCucumberSlice(ctx, x, y, r) {
+            ctx.save();
+            // 테두리 짙은 녹색 껍질
+            ctx.fillStyle = '#15803d';
+            ctx.beginPath();
+            ctx.arc(x, y, r, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 부드러운 속살 연두색
+            ctx.fillStyle = '#bbf7d0';
+            ctx.beginPath();
+            ctx.arc(x, y, r * 0.8, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 점박이 오이 씨앗 묘사
+            ctx.fillStyle = '#166534';
+            ctx.font = `${r * 0.5}px sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('•', x - r * 0.3, y - r * 0.2);
+            ctx.fillText('•', x + r * 0.3, y - r * 0.3);
+            ctx.fillText('•', x - r * 0.2, y + r * 0.3);
+            ctx.fillText('•', x + r * 0.2, y + r * 0.2);
+            ctx.restore();
+        }
+
+        // --- STREAMING_CHUNK: Activating cheer popups ... ---
+        // --- 응원 말풍선 분출 함수 ---
+        function showCheer() {
+            const bubble = document.getElementById('cheer-bubble');
+            const collection = (currentStage === 1) ? CHEER_S1 : CHEER_S2;
+            const randomMsg = collection[Math.floor(Math.random() * collection.length)];
+            
+            bubble.innerText = randomMsg;
+            bubble.style.opacity = '1';
+            bubble.style.transform = 'translate(-50%, -50%) scale(1)';
+            
+            setTimeout(() => {
+                bubble.style.opacity = '0';
+                bubble.style.transform = 'translate(-50%, -50%) scale(0.75)';
+            }, 1800);
+        }
+
+        // --- 게임 핵심 글로벌 상수 및 세팅 ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // 상태값 관리
+        let currentStage = 1;
+        let score = 0;
+        let cucumbersCaught = 0; // 2스테이지 오이 누적 개수
+        let hearts = 3;
+        let gameOver = false;
+        let stageTimer = 0;
+        const STAGE_DURATION = 60 * 60; // 60초 (60FPS 기준)
+        let gameActive = false;
+
+        // 이미지 로드 관리 객체
+        let imagesLoaded = { player: false, bg: false, face: false };
+        const imgPlayer = document.getElementById('player-img');
+        const imgBg = document.getElementById('stage1-bg');
+        const imgFace = document.getElementById('face-img');
+
+        imgPlayer.onload = () => imagesLoaded.player = true;
+        imgBg.onload = () => imagesLoaded.bg = true;
+        imgFace.onload = () => imagesLoaded.face = true;
+
+        // 연우 얼굴 세밀 크롭 드로잉
+        function drawYeonwooFaceCircle(ctx, x, y, radius, img, loaded) {
+            if (loaded && img.complete && img.naturalWidth > 0) {
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(x, y, radius, 0, Math.PI * 2);
+                ctx.clip();
+                
+                // 얼굴 중앙 비율 세밀 축소 크롭
+                const sSize = Math.min(img.naturalWidth, img.naturalHeight) * 0.52; 
+                const sx = (img.naturalWidth - sSize) / 2;
+                const sy = (img.naturalHeight - sSize) * 0.35; 
+                
+                ctx.drawImage(img, sx, sy, sSize, sSize, x - radius, y - radius, radius * 2, radius * 2);
+                ctx.restore();
+            } else {
+                ctx.beginPath();
+                ctx.arc(x, y, radius, 0, Math.PI * 2);
+                ctx.fillStyle = '#fbcfe8';
+                ctx.fill();
+                ctx.lineWidth = 3;
+                ctx.strokeStyle = '#ec4899';
+                ctx.stroke();
+                
+                ctx.fillStyle = '#000000';
+                ctx.font = `bold ${radius * 0.9}px Gaegu`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('👧', x, y);
+            }
+        }
+
+        // --- STREAMING_CHUNK: Coding Stage 1 Bike riding ... ---
+        // --- [스테이지 1] 세로 화면 특화 자전거 라이딩 클래스 ---
+        class BikeYeonwoo {
+            constructor() {
+                this.x = 60;
+                this.y = 620; // 지면 레벨 (세로 높이 800 기준 조정)
+                this.width = 65;
+                this.height = 80;
+                this.vy = 0;
+                this.gravity = 0.52;
+                this.jumpStrength = -14.5; // 점프 높이를 충분히 높여서 하늘 위 아이템까지 먹을 수 있게 강화!
+                this.isJumping = false;
+                this.rotation = 0;
+            }
+            jump() {
+                if (!this.isJumping) {
+                    this.vy = this.jumpStrength;
+                    this.isJumping = true;
+                    playSound('jump');
+                }
+            }
+            update() {
+                this.vy += this.gravity;
+                this.y += this.vy;
+                
+                const groundY = 620;
+                if (this.y >= groundY) {
+                    this.y = groundY;
+                    this.vy = 0;
+                    this.isJumping = false;
+                }
+
+                if (!this.isJumping) {
+                    this.rotation = Math.sin(stageTimer * 0.35) * 0.03;
+                } else {
+                    this.rotation = this.vy * 0.02;
+                }
+            }
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.rotation);
+
+                // 자전거 프레임
+                ctx.lineWidth = 3;
+                ctx.strokeStyle = '#4ade80'; 
+                ctx.beginPath();
+                ctx.moveTo(-15, 10);
+                ctx.lineTo(10, 10);
+                ctx.lineTo(-5, -15);
+                ctx.closePath();
+                ctx.stroke();
+
+                // 뒷바퀴 / 앞바퀴
+                ctx.fillStyle = '#475569';
+                ctx.strokeStyle = '#cbd5e1';
+                ctx.lineWidth = 2.5;
+                ctx.beginPath(); ctx.arc(-20, 20, 12, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+                ctx.beginPath(); ctx.arc(15, 20, 12, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+
+                // 바구니
+                ctx.fillStyle = '#fef08a';
+                ctx.fillRect(10, -10, 10, 8);
+
+                // 탑승한 연우 머리
+                drawYeonwooFaceCircle(ctx, -5, -30, 24, imgPlayer, imagesLoaded.player);
+
+                ctx.restore();
+            }
+        }
+
+        class Background {
+            constructor() {
+                this.x = 0;
+                this.speed = 2.8;
+            }
+            update() {
+                this.x -= this.speed;
+                if (this.x <= -450) { // 세로형 넓이 기준 무한 반복 스크롤
+                    this.x = 0;
+                }
+            }
+            draw() {
+                if (imagesLoaded.bg && imgBg.complete && imgBg.naturalWidth > 0) {
+                    // 세로로 긴 배경 원화를 온전히 세로 크기 800에 맞춰 렌더링
+                    ctx.drawImage(imgBg, this.x, 0, 450, 800);
+                    ctx.drawImage(imgBg, this.x + 450, 0, 450, 800);
+                } else {
+                    ctx.fillStyle = '#bae6fd';
+                    ctx.fillRect(0, 0, 450, 800);
+                    // 바다 파스텔 선
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.arc(100, 100, 30, 0, Math.PI*2);
+                    ctx.arc(140, 90, 40, 0, Math.PI*2);
+                    ctx.arc(180, 100, 30, 0, Math.PI*2);
+                    ctx.fill();
+                }
+
+                // 방파제 밑 바닥
+                ctx.fillStyle = '#94a3b8';
+                ctx.fillRect(0, 640, 450, 160);
+                ctx.strokeStyle = '#64748b';
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                ctx.moveTo(0, 640);
+                ctx.lineTo(450, 640);
+                ctx.stroke();
+            }
+        }
+
+        class Obstacle {
+            constructor() {
+                this.type = Math.random() < 0.4 ? 'gull' : (Math.random() < 0.5 ? 'puddle' : 'rock');
+                this.x = 500; // 세로 넓이 바깥에서 진입
+                this.speed = 3.6 + Math.random() * 1.6; // 너무 빠르지 않게 밸런싱
+                
+                if (this.type === 'gull') {
+                    this.y = 480 + Math.random() * 50; 
+                    this.width = 30;
+                    this.height = 20;
+                } else if (this.type === 'puddle') {
+                    this.y = 630;
+                    this.width = 45;
+                    this.height = 12;
+                } else {
+                    this.y = 615;
+                    this.width = 30;
+                    this.height = 25;
+                }
+            }
+            update() {
+                this.x -= this.speed;
+            }
+            draw() {
+                ctx.save();
+                if (this.type === 'gull') {
+                    const wingOffset = Math.sin(stageTimer * 0.25) * 6;
+                    ctx.strokeStyle = '#475569';
+                    ctx.lineWidth = 3;
+                    ctx.lineCap = 'round';
+                    ctx.beginPath();
+                    ctx.moveTo(this.x, this.y);
+                    ctx.quadraticCurveTo(this.x - 8, this.y - 12 + wingOffset, this.x - 16, this.y);
+                    ctx.moveTo(this.x, this.y);
+                    ctx.quadraticCurveTo(this.x + 8, this.y - 12 + wingOffset, this.x + 16, this.y);
+                    ctx.stroke();
+                } else if (this.type === 'puddle') {
+                    ctx.fillStyle = '#38bdf8';
+                    ctx.beginPath();
+                    ctx.ellipse(this.x, this.y + 4, 18, 6, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                } else {
+                    ctx.fillStyle = '#cbd5e1';
+                    ctx.beginPath();
+                    ctx.moveTo(this.x - 12, this.y + 15);
+                    ctx.quadraticCurveTo(this.x - 10, this.y - 5, this.x, this.y);
+                    ctx.quadraticCurveTo(this.x + 10, this.y - 5, this.x + 12, this.y + 15);
+                    ctx.closePath();
+                    ctx.fill();
+                }
+                ctx.restore();
+            }
+        }
+
+        class Item {
+            constructor() {
+                this.type = Math.random() < 0.5 ? 'shell' : 'icecream';
+                this.x = 500;
+                // 아이템 위치를 Y=410~520으로 약간 낮춰서 점프로 더 맛있게 수집할 수 있게 정렬
+                this.y = 410 + Math.random() * 110;
+                this.speed = 3.2;
+                this.width = 25;
+                this.height = 25;
+                this.floatOffset = Math.random() * 10;
+            }
+            update() {
+                this.x -= this.speed;
+                this.y += Math.sin(stageTimer * 0.12 + this.floatOffset) * 0.8;
+            }
+            draw() {
+                ctx.save();
+                ctx.font = '24px Gaegu';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                if (this.type === 'shell') {
+                    ctx.fillText('🐚', this.x, this.y);
+                } else {
+                    ctx.fillText('🍦', this.x, this.y);
+                }
+                ctx.restore();
+            }
+        }
+
+        // --- STREAMING_CHUNK: Coding Stage 2 Cucumber facial platform ... ---
+        // --- [스테이지 2] 평상 오이 수급 플랫폼 클래스 ---
+        class PlatformYeonwoo {
+            constructor() {
+                this.width = 140;
+                this.height = 120;
+                this.x = 225; // 중앙
+                this.y = 620;
+                this.targetX = 225;
+            }
+            update() {
+                this.x += (this.targetX - this.x) * 0.28;
+                if (this.x < 70) { this.x = 70; this.targetX = 70; }
+                if (this.x > 380) { this.x = 380; this.targetX = 380; }
+            }
+            draw() {
+                ctx.save();
+                
+                // 나무 평상
+                ctx.fillStyle = '#fbcfe8';
+                ctx.fillRect(this.x - 70, this.y + 35, 140, 20);
+                ctx.fillStyle = '#f472b6';
+                ctx.fillRect(this.x - 75, this.y + 38, 8, 18);
+                ctx.fillRect(this.x + 67, this.y + 38, 8, 18);
+
+                // 누워있는 연우 얼굴
+                drawYeonwooFaceCircle(ctx, this.x, this.y - 10, 52, imgFace, imagesLoaded.face);
+
+                // 붙은 오이들 상대좌표 연동 그리기 (오이 카운트에 완벽 연계)
+                let cucumbersToDraw = Math.min(cucumbersCaught, 15);
+                for (let i = 0; i < cucumbersToDraw; i++) {
+                    const offset = cucumberFaceOffsets[i];
+                    drawCucumberSlice(ctx, this.x + offset.x * 0.8, this.y - 10 + offset.y * 0.8, 10);
+                }
+
+                ctx.restore();
+            }
+        }
+
+        class FallingItem {
+            constructor() {
+                const rand = Math.random();
+                if (rand < 0.6) {
+                    this.type = 'cucumber';
+                } else if (rand < 0.8) {
+                    this.type = 'lemon';
+                } else {
+                    this.type = 'bee';
+                }
+                this.x = 30 + Math.random() * 390;
+                this.y = -30;
+                this.speed = 2.2 + Math.random() * 2.8;
+                this.rotation = Math.random() * Math.PI;
+                this.rotSpeed = (Math.random() - 0.5) * 0.04;
+            }
+            update() {
+                this.y += this.speed;
+                this.rotation += this.rotSpeed;
+            }
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.rotation);
+                ctx.font = '28px Gaegu';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                
+                if (this.type === 'cucumber') {
+                    ctx.fillText('🥒', 0, 0);
+                } else if (this.type === 'lemon') {
+                    ctx.fillText('🍋', 0, 0);
+                } else {
+                    ctx.fillText('🐝', 0, 0);
+                }
+                ctx.restore();
+            }
+        }
+
+        // --- STREAMING_CHUNK: Coding state management triggers ... ---
+        // --- 글로벌 변수 및 초기화 제어 ---
+        let playerS1;
+        let bgS1;
+        let obstacles;
+        let items;
+
+        let playerS2;
+        let fallingItems;
+
+        function initStage(stageNum) {
+            currentStage = stageNum;
+            stageTimer = 0;
+            gameOver = false;
+            
+            if (stageNum === 1) {
+                score = 0;
+                cucumbersCaught = 0;
+                hearts = 3;
+                playerS1 = new BikeYeonwoo();
+                bgS1 = new Background();
+                obstacles = [];
+                items = [];
+                document.getElementById('mobile-ctrl-s1').classList.remove('hidden');
+                document.getElementById('mobile-ctrl-s2').classList.add('hidden');
+                document.getElementById('cucumber-badge').classList.add('hidden');
+            } else {
+                playerS2 = new PlatformYeonwoo();
+                fallingItems = [];
+                cucumbersCaught = 0;
+                document.getElementById('mobile-ctrl-s1').classList.add('hidden');
+                document.getElementById('mobile-ctrl-s2').classList.remove('hidden');
+                document.getElementById('cucumber-badge').classList.remove('hidden');
+            }
+            updateUI();
+        }
+
+        function updateUI() {
+            document.getElementById('score-val').innerText = score;
+            document.getElementById('cucumber-count').innerText = cucumbersCaught;
+            
+            const hc = document.getElementById('heart-container');
+            hc.innerHTML = '';
+            for (let i = 0; i < 3; i++) {
+                const heartSpan = document.createElement('span');
+                heartSpan.innerText = i < hearts ? '❤️' : '🖤';
+                hc.appendChild(heartSpan);
+            }
+
+            const pb = document.getElementById('progress-bar');
+            const pe = document.getElementById('progress-emoji');
+            
+            if (currentStage === 1) {
+                const pct = Math.min((stageTimer / STAGE_DURATION) * 100, 100);
+                pb.style.width = pct + '%';
+                pe.style.left = `calc(${pct}% - 12px)`;
+                pe.innerText = '🚲';
+            } else {
+                const pct = Math.min((cucumbersCaught / 15) * 100, 100);
+                pb.style.width = pct + '%';
+                pe.style.left = `calc(${pct}% - 12px)`;
+                pe.innerText = '🥒';
+            }
+        }
+
+        // 구형 브라우저에서도 완전 무결하게 구동되는 ES5 호환 안전 토스트 발생 장치
+        function triggerToast(title, desc, duration, callback) {
+            const overlay = document.getElementById('toast-overlay');
+            const titleEl = document.getElementById('toast-title');
+            const descEl = document.getElementById('toast-desc');
+            
+            if (titleEl) titleEl.innerText = title;
+            if (descEl) descEl.innerText = desc;
+            
+            if (overlay) {
+                overlay.classList.remove('pointer-events-none');
+                overlay.style.opacity = '1';
+            }
+
+            const delay = duration ? duration : 2000;
+
+            setTimeout(() => {
+                if (overlay) {
+                    overlay.style.opacity = '0';
+                    overlay.classList.add('pointer-events-none');
+                }
+                if (callback && typeof callback === 'function') {
+                    callback();
+                }
+            }, delay);
+        }
+
+        // --- STREAMING_CHUNK: Coding main game loop ... ---
+        // --- 메인 게임 루프 ---
+        function gameLoop() {
+            if (!gameActive) return;
+
+            ctx.clearRect(0, 0, 450, 800);
+
+            if (currentStage === 1) {
+                stageTimer++;
+                bgS1.update();
+                bgS1.draw();
+
+                playerS1.update();
+                playerS1.draw();
+
+                if (stageTimer < STAGE_DURATION - 200) {
+                    if (stageTimer % 130 === 0) {
+                        obstacles.push(new Obstacle());
+                    }
+                    if (stageTimer % 90 === 0) {
+                        items.push(new Item());
+                    }
+                }
+
+                if (stageTimer % 350 === 0) {
+                    showCheer();
+                }
+
+                // 장애물 충돌 검사
+                for (let i = obstacles.length - 1; i >= 0; i--) {
+                    const obs = obstacles[i];
+                    obs.update();
+                    obs.draw();
+
+                    if (obs.x > playerS1.x - 22 && obs.x < playerS1.x + 22 &&
+                        obs.y > playerS1.y - 15 && obs.y < playerS1.y + 25) {
+                        
+                        obstacles.splice(i, 1);
+                        hearts--;
+                        playSound('hurt');
+                        score = Math.max(0, score - 30);
+                        updateUI();
+
+                        if (hearts <= 0) {
+                            hearts = 3;
+                            updateUI();
+                            triggerToast("연우 화이팅!", "힘을 내서 다시 달려볼까요? 💕", 2000);
+                        }
+                    } else if (obs.x < -50) {
+                        obstacles.splice(i, 1);
+                    }
+                }
+
+                // 아이템 습득 검사
+                for (let i = items.length - 1; i >= 0; i--) {
+                    const item = items[i];
+                    item.update();
+                    item.draw();
+
+                    if (item.x > playerS1.x - 25 && item.x < playerS1.x + 25 &&
+                        item.y > playerS1.y - 45 && item.y < playerS1.y + 15) {
+                        
+                        items.splice(i, 1);
+                        playSound('item');
+                        score += (item.type === 'shell') ? 50 : 80;
+                        updateUI();
+                    } else if (item.x < -50) {
+                        items.splice(i, 1);
+                    }
+                }
+
+                updateUI();
+
+                if (stageTimer >= STAGE_DURATION) {
+                    gameActive = false;
+                    playSound('clear');
+                    triggerToast("휴가지에 도착했어요! 🎉", "시원한 평상에서 보들보들 오이팩을 해요!", 3500, function() {
+                        initStage(2);
+                        gameActive = true;
+                        requestAnimationFrame(gameLoop);
+                    });
+                    return;
+                }
+
+            } else {
+                // [스테이지 2 구동]
+                stageTimer++;
+                
+                // 야자수와 노을지는 다홍빛 감성 해변
+                ctx.fillStyle = '#ffedd5'; 
+                ctx.fillRect(0, 0, 450, 800);
+                
+                ctx.fillStyle = '#fecdb3';
+                ctx.beginPath();
+                ctx.ellipse(225, 800, 350, 200, 0, 0, Math.PI, true);
+                ctx.fill();
+
+                // 미니 야자수 일러스트
+                ctx.font = '52px Gaegu';
+                ctx.fillText('🌴', 35, 520);
+                ctx.fillText('🌴', 380, 520);
+
+                playerS2.update();
+                playerS2.draw();
+
+                if (stageTimer % 65 === 0) {
+                    fallingItems.push(new FallingItem());
+                }
+
+                if (stageTimer % 380 === 0) {
+                    showCheer();
+                }
+
+                // 낙하 아이템 검사 및 멈춤 방지 가드 레일
+                for (let i = fallingItems.length - 1; i >= 0; i--) {
+                    const fi = fallingItems[i];
+                    fi.update();
+                    fi.draw();
+
+                    if (fi.y > playerS2.y - 40 && fi.y < playerS2.y + 15 &&
+                        fi.x > playerS2.x - 70 && fi.x < playerS2.x + 70) {
+                        
+                        const itemType = fi.type;
+                        fallingItems.splice(i, 1); // splice 먼저 하되, 복사한 로컬 변수로 안전하게 제어
+
+                        if (itemType === 'cucumber') {
+                            playSound('item');
+                            cucumbersCaught++;
+                            score += 100; // 오이 받을 때마다 100점 추가 가산
+                            updateUI();
+
+                            if (cucumbersCaught >= 15) {
+                                gameActive = false;
+                                playSound('clear');
+                                setTimeout(function() {
+                                    showEnding();
+                                }, 800);
+                                return;
+                            }
+                        } else {
+                            playSound('hurt');
+                            if (cucumbersCaught > 0) {
+                                cucumbersCaught--;
+                                score = Math.max(0, score - 100);
+                            }
+                            updateUI();
+                            triggerToast("아이쿠!", itemType === 'bee' ? "꿀벌이 날아왔어요! 🐝" : "레몬은 너무 시어요! 🍋", 1200);
+                        }
+                    } else if (fi.y > 830) {
+                        fallingItems.splice(i, 1);
+                    }
+                }
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        function showEnding() {
+            const modal = document.getElementById('ending-modal');
+            const fs = document.getElementById('final-score');
+            
+            // 다채롭고 가변성 높은 최종 점수 연출
+            const finalScoreVal = score + (hearts * 150);
+            fs.innerText = finalScoreVal.toLocaleString() + " 점";
+
+            modal.classList.remove('pointer-events-none');
+            modal.style.opacity = '1';
+            modal.children[0].style.transform = 'scale(1)';
+        }
+
+        // 키보드 조작 연동
+        const keys = {};
+        window.addEventListener('keydown', (e) => {
+            keys[e.code] = true;
+            if (e.code === 'Space') {
+                e.preventDefault();
+                if (currentStage === 1 && gameActive) {
+                    playerS1.jump();
+                }
+            }
+        });
+        window.addEventListener('keyup', (e) => {
+            keys[e.code] = false;
+        });
+
+        // 2스테이지 플랫폼 쾌속 조율
+        setInterval(() => {
+            if (!gameActive || currentStage !== 2) return;
+            if (keys['ArrowLeft']) {
+                playerS2.targetX -= 11;
+            }
+            if (keys['ArrowRight']) {
+                playerS2.targetX += 11;
+            }
+        }, 1000 / 60);
+
+        // 모바일/마우스 전용 이벤트 처리
+        const touchJumpBtn = document.getElementById('touch-jump-btn');
+        touchJumpBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (currentStage === 1 && gameActive) playerS1.jump();
+        });
+        touchJumpBtn.addEventListener('click', () => {
+            if (currentStage === 1 && gameActive) playerS1.jump();
+        });
+
+        const touchLeftBtn = document.getElementById('touch-left-btn');
+        const touchRightBtn = document.getElementById('touch-right-btn');
+        
+        let touchLeftInterval, touchRightInterval;
+        
+        function startMovingLeft() {
+            if (touchLeftInterval) clearInterval(touchLeftInterval);
+            touchLeftInterval = setInterval(() => {
+                if (currentStage === 2 && gameActive) playerS2.targetX -= 13;
+            }, 1000 / 60);
+        }
+        function stopMovingLeft() {
+            clearInterval(touchLeftInterval);
+        }
+
+        function startMovingRight() {
+            if (touchRightInterval) clearInterval(touchRightInterval);
+            touchRightInterval = setInterval(() => {
+                if (currentStage === 2 && gameActive) playerS2.targetX += 13;
+            }, 1000 / 60);
+        }
+        function stopMovingRight() {
+            clearInterval(touchRightInterval);
+        }
+
+        touchLeftBtn.addEventListener('touchstart', (e) => { e.preventDefault(); startMovingLeft(); });
+        touchLeftBtn.addEventListener('touchend', stopMovingLeft);
+        touchLeftBtn.addEventListener('mousedown', startMovingLeft);
+        touchLeftBtn.addEventListener('mouseup', stopMovingLeft);
+        touchLeftBtn.addEventListener('mouseleave', stopMovingLeft);
+
+        touchRightBtn.addEventListener('touchstart', (e) => { e.preventDefault(); startMovingRight(); });
+        touchRightBtn.addEventListener('touchend', stopMovingRight);
+        touchRightBtn.addEventListener('mousedown', startMovingRight);
+        touchRightBtn.addEventListener('mouseup', stopMovingRight);
+        touchRightBtn.addEventListener('mouseleave', stopMovingRight);
+
+        // 스와이프 및 드래그 완벽 감응 장치
+        canvas.addEventListener('touchmove', (e) => {
+            if (currentStage === 2 && gameActive) {
+                const rect = canvas.getBoundingClientRect();
+                const touchX = e.touches[0].clientX - rect.left;
+                const scaleX = canvas.width / rect.width;
+                playerS2.targetX = touchX * scaleX;
+            }
+        }, { passive: true });
+
+        // 시작 버튼 이벤트
+        document.getElementById('start-btn').addEventListener('click', () => {
+            document.getElementById('start-screen').classList.add('hidden');
+            gameActive = true;
+            initStage(1);
+            playSound('jump');
+            requestAnimationFrame(gameLoop);
+        });
+
+        document.getElementById('restart-btn').addEventListener('click', () => {
+            const modal = document.getElementById('ending-modal');
+            modal.style.opacity = '0';
+            modal.classList.add('pointer-events-none');
+            
+            initStage(1);
+            gameActive = true;
+            requestAnimationFrame(gameLoop);
+        });
+    </script>
+</body>
+</html>
